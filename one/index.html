@@ -1,0 +1,44 @@
+<html>
+<head>
+  <title>Simple Triangle</title>
+</head>
+<body>
+
+<canvas id="main" width="800" height="600" >
+  Your Browser Does not Support HTML5
+</canvas>
+<br />
+<i>demo is right above this text</i>
+
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec2 vertPosition;
+void main() {
+  gl_Position = vec4(vertPosition, 0.0, 1.0);
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+void main() {
+  gl_FragColor = vec4( 1.0, 0.0, 0.0, 1.0 );
+}
+</script>
+<script src="./src.js" ></script>
+
+
+<script>
+
+window.onload = () => {
+  var main = document.getElementById("main")
+  var vs = document.getElementById("vertex-shader").innerHTML
+  var fs = document.getElementById("fragment-shader").innerHTML
+  var demo = new Demo(main, vs, fs)
+  demo.drawTriangle()
+}
+</script>
+</body>
+
+</html>
+
+
