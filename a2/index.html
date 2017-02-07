@@ -73,7 +73,7 @@ void main() {
       vec3 N2 = normalize(P2 - S2.xyz);             // Surface normal
       float brightness = max(0., dot(N2, LDir));
       brightness = mix(.1, brightness, .6);      // Diffuse surface
-      c = vec3(.15,0.2,.4) * brightness;   
+      c = mix(vec3(.1, .3, 1.), vec3(0.,1,.3), .5 * vPos.y) * brightness;
    }
 
    gl_FragColor = vec4(sqrt(c), 1.);             // Final pixel color
