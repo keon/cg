@@ -1,0 +1,212 @@
+<script src=lib5.js></script>
+<script src=noise_shader.js></script>
+
+<body bgcolor=black text=white>
+<center>
+<canvas id='canvas1' width=600 height=600></canvas>
+</center>
+</body>
+
+<script id='vs_script' type='x-shader/x-vertex'>
+   attribute vec3 aPos;
+   varying   vec3 vPos;
+   void main() {
+      gl_Position = vec4(aPos, 1.0);
+      vPos = aPos;
+   }
+</script>
+
+<script id='fss_script' type='x-shader/x-fragment'>
+
+---------------------------------------------------------------------
+varying vec3 vPos;                             // Position in image
+uniform float uTime;                           // Time
+
+struct Light {                                 // Light source data.
+   vec3 direction;
+   vec3 color;
+};
+
+struct Material {                              // Surface material data.
+   vec3  ambient;
+   vec3  diffuse;
+   vec3  specular;
+   float power;
+};
+
+struct Sphere {                                // Sphere object data.
+   vec3     center;
+   float    radius;
+   Material material;
+};
+
+uniform Light uLights[NLIGHTS];                // All the lights.
+uniform Sphere uSpheres[NSPHERES];             // All the spheres.
+
+vec2 raytraceSphere(vec3 V, vec3 W, Sphere S) {
+   V -= S.center;
+   float B = 2. * dot(V, W);
+   float C = dot(V, V) - S.radius * S.radius;
+   float discrim = B*B - 4.*C;
+   vec2 t = vec2(1000., 1000.);
+   if (discrim > 0.)
+      t = vec2(-B - discrim, -B + discrim) / 2.;
+   return t.x > 0. ? t : vec2(1000., 1000.);
+}
+
+vec3 backgroundColor(vec3 dir) {
+   float t = .5 - .5 * dir.y;
+   return mix(vec3(.2,.01,.01), vec3(.01,.01,.1), 1. - t * t);
+}
+
+vec3 phong(vec3 P, vec3 N, vec3 E, Material C) {
+   vec3 c = C.ambient * backgroundColor(N);            // Ambient color
+   for (int i = 0 ; i < NLIGHTS ; i++) { // Loop through lights
+      vec3 L = normalize(uLights[i].direction);
+      vec2 t;
+      for (int j = 0 ; j < NSPHERES ; j++) {           // Loop through spheres.
+         t = raytraceSphere(P+.001*L, L, uSpheres[j]); // If any casts a shadow
+         if (t.x < 1000.)                              // then stop looping.
+            break;
+      }
+      if (t.x == 1000.) {                              // If not in shadow:
+         float d = max(0., dot(N, L));                     // Diffuse value
+         vec3  R = reflect(-L, N);
+         float s = pow(max(0., dot(E, R)), C.power);       // Specular value
+         c += uLights[i].color * (d * C.diffuse + s * C.specular * .1*C.power);
+      }
+   }
+   return c;
+}
+
+Material C;
+vec3 V, W, P, E, N;
+
+bool raytrace() {
+   float distance = 1000.;
+   for (int i = 0 ; i < NSPHERES ; i++) {
+      vec2 t = raytraceSphere(V, W, uSpheres[i]);
+      if (t.x < distance) {
+         C = uSpheres[i].material;                // Material for this object
+         P = V + t.x * W;                         // Point on sphere
+         E = -normalize(P);                       // Direction to eye
+         N = normalize(P - uSpheres[i].center);   // Surface normal
+         distance = t.x;
+      }
+   }
+   return distance < 1000.;
+}
+
+void main() {
+   vec3 c = vec3(0.,0.,0.);
+
+   V = vec3(0.,0.,0.);                         // Ray origin
+   W = normalize(vec3(vPos.xy, -3.));          // Ray direction
+   if (! raytrace())
+      c = backgroundColor(vPos);
+   else
+      for (int bounce = 0 ; bounce < 5 ; bounce++) {
+         float attenuation = pow(0.6, float(bounce + 1));
+         c += attenuation * phong(P, N, E, C);
+         c += .5 * attenuation * backgroundColor(W);
+         V = P + .001 * W;
+         W = reflect(W, N);
+         if (! raytrace())
+            break;
+      }
+         
+   gl_FragColor = vec4(sqrt(c), 1.);           // Final pixel color
+}
+---------------------------------------------------------------------
+Many differently colored light sources.
+</script>
+   
+<script>
+addTextEditor(fss_script.innerHTML.split('---------------------------------------------------------------------'),
+              function() { canvas1.setFragmentShader(this.value); });
+
+function gl_uniform1f(gl, name, a)       { gl.uniform1f(gl.getUniformLocation(gl.program, name), a); }
+function gl_uniform2f(gl, name, a,b)     { gl.uniform2f(gl.getUniformLocation(gl.program, name), a,b); }
+function gl_uniform3f(gl, name, a,b,c)   { gl.uniform3f(gl.getUniformLocation(gl.program, name), a,b,c); }
+function gl_uniform4f(gl, name, a,b,c,d) { gl.uniform4f(gl.getUniformLocation(gl.program, name), a,b,c,d); }
+
+var NLIGHTS = 10;
+var NSPHERES = 3;
+
+insertFragmentShaderCode(noise_shader);
+insertFragmentShaderCode('#define NLIGHTS ' + NLIGHTS + '\n');
+insertFragmentShaderCode('#define NSPHERES ' + NSPHERES + '\n');
+
+var uLights, uSpheres;
+
+gl_start(canvas1, vs_script.innerHTML,
+
+   function(gl) {
+
+      uLights = [];
+      for (var i = 0 ; i < NLIGHTS ; i++) {
+         let name = 'uLights[' + i + '].';
+         uLights.push({
+            direction: gl.getUniformLocation(gl.program, name + 'direction'),
+            color    : gl.getUniformLocation(gl.program, name + 'color'    ),
+         });
+      }
+   
+      uSpheres = [];
+      for (var i = 0 ; i < NSPHERES ; i++) {
+         let name = 'uSpheres[' + i + '].';
+         uSpheres.push({
+            center   : gl.getUniformLocation(gl.program, name + 'center'),
+            radius   : gl.getUniformLocation(gl.program, name + 'radius'),
+            material : {
+               ambient : gl.getUniformLocation(gl.program, name + 'material.ambient' ),
+               diffuse : gl.getUniformLocation(gl.program, name + 'material.diffuse' ),
+               specular: gl.getUniformLocation(gl.program, name + 'material.specular'),
+               power   : gl.getUniformLocation(gl.program, name + 'material.power'   ),
+            },
+         });
+      }
+
+      function mix(a, b, t) { return a + t * (b - a); }
+   
+      for (var i = 0 ; i < uLights.length ; i++) {
+         var d = [];
+	 d[0] = Math.random()-.5;
+	 d[1] = Math.random()-.5;
+	 d[2] = Math.random()-.5;
+	 let t = .5 - .5 * d[1] / Math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+	 t = 1 - t * t;
+         gl.uniform3f(uLights[i].direction, d[0], d[1], d[2]);
+         gl.uniform3f(uLights[i].color    , .5 * mix(1, .05, t)
+                                          , .5 * .05
+					  , .5 * mix(.05, .5, t));
+      }
+   
+      var a = [1,.8,0];
+      for (var i = 0 ; i < uSpheres.length ; i++) {
+         let j = (i + 1) % 3, k = (i + 2) % 3;
+         gl.uniform1f(uSpheres[i].radius, .5);
+         gl.uniform1f(uSpheres[i].material.power, 10);
+   
+         gl.uniform3f(uSpheres[i].material.ambient , a[i]*.1,a[j]*.1,a[k]*.1);
+         gl.uniform3f(uSpheres[i].material.diffuse , a[i]*.1,a[j]*.1,a[k]*.1);
+         gl.uniform3f(uSpheres[i].material.specular, a[i]   ,a[j]   ,a[k]   );
+      }
+   },
+   
+   function(gl) {
+      var d = 4;
+      var s0 = .5 * Math.sin(.5 * time + .3);
+      var c0 = .5 * Math.cos(.5 * time + .3);
+      var s1 = .5 * Math.sin(.5 * time     );
+      var c1 = .5 * Math.cos(.5 * time     );
+      var s2 = .5 * Math.sin(.5 * time - .3);
+      var c2 = .5 * Math.cos(.5 * time - .3);
+   
+      gl.uniform3f(uSpheres[0].center,     c0,  .45, -d +     s0);
+      gl.uniform3f(uSpheres[1].center, -.8*c1,   0 , -d -  .8*s1);
+      gl.uniform3f(uSpheres[2].center,     c2, -.45, -d +     s2);
+   }
+);
+</script>
+   
