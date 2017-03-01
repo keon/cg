@@ -68,7 +68,7 @@ vec2 raytraceSphere(vec3 V, vec3 W, Sphere S) {
 
 vec3 backgroundColor(vec3 dir) {
    float t = .5 - .5 * dir.y;
-   return mix(effect(vec3(.2,.01,.01)), effect(vec3(.01,.01,.1)), 1. - t * t);
+   return sin(tan(uTime*10.) * mix(vec3(.2,.01,.01), vec3(.01,.01,.1), 1. - t * t));
 }
 
 vec3 phong(vec3 P, vec3 N, vec3 E, Material C) {
