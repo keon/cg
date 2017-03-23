@@ -1,0 +1,205 @@
+
+<table>
+
+<tr>
+<td><canvas id=canvas1 width=600 height=400></td>
+<td width=50></td>
+<td valign=top>
+A very skinny person dancing.
+</td>
+</tr>
+
+</table>
+
+<script src=drawlib1.js></script>
+<script src=M.js></script>
+<script>
+
+   // MATRIX IS AN ARRAY OF 16 NUMBERS.
+
+   var m = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
+
+   // MAINTAIN A DANCE BEAT OVER TIME.
+
+   var beat = 0;
+
+   canvas1.update = function(g) {
+
+      // DRAW A CURVE IN 3D WITH PERSPECTIVE PROJECTION.
+
+      function drawCurve(c) {
+         var i, cv, x, y, z, fl = 5,
+	     w = canvas1.width;
+	     h = canvas1.height;
+
+	 cv = [];
+	 for (i = 0 ; i < c.length ; i++) {
+
+	    // RETRIEVE COORDINATES FROM CURVE POINT
+
+	    x = c[i][0];
+	    y = c[i][1];
+	    z = c[i][2];
+
+	    // DO PERSPECTIVE TRANSFORM
+
+	    x *= fl / (fl - z);
+	    y *= fl / (fl - z);
+
+	    // DO VIEWPORT TRANSFORM
+
+	    x =  w * x * .5 + .5 * w;
+	    y = -w * y * .5 + .5 * h;
+	    cv.push([x, y, 0]);
+         }
+
+	 // DRAW THE PROJECTED CURVE ONTO THE CANVAS.
+
+	 g.beginPath();
+         g.moveTo(cv[0][0], cv[0][1]);
+	 for (i = 1 ; i < c.length ; i++)
+            g.lineTo(cv[i][0], cv[i][1]);
+	 g.stroke();
+      }
+
+      var p, c, i;
+
+      // ADVANCE THE BEAT A VARIABLE AMOUNT,
+      // DEPENDING ON THE CURSOR POSITION.
+
+      beat += 5 * this.cursor.x / this.width / 30;
+
+      // DRAW AN OUTLINE AROUND THE CANVAS.
+
+      g.beginPath();
+      g.moveTo(0,0);
+      g.lineTo(this.width,0);
+      g.lineTo(this.width,this.height);
+      g.lineTo(0,this.height);
+      g.lineTo(0,0);
+      g.stroke();
+
+      // DEFINE A POINT IN SPACE TO TRANSFORM.
+
+      p = [0,0,0];
+
+      // START OUT WITH THE IDENTITY MATRIX.
+
+      M.identity(m);
+
+      // MOVE TO POSITION OF NECK
+
+      c = [];
+      M.translate(m, [0,.35,0]);
+
+      // DRAW THE HEAD
+
+      M.save(m);
+         c = [];
+         M.translate(m, [0,.1,0]);
+         M.rotateZ(m, Math.sin(beat)/4);
+         c.push(M.transform(m, p));
+	 M.translate(m, [-.1,.1,0]);
+         c.push(M.transform(m, p));
+	 M.translate(m, [.1,.1,0]);
+         c.push(M.transform(m, p));
+	 M.translate(m, [.1,-.1,0]);
+         c.push(M.transform(m, p));
+	 M.translate(m, [-.1,-.1,0]);
+         c.push(M.transform(m, p));
+	 drawCurve(c);
+      M.restore(m);
+
+      // DRAW THE LEFT ARM
+
+      M.save(m);
+         c = [];
+         c.push(M.transform(m, p));
+
+	 M.translate(m, [.1,0,0]);
+         c.push(M.transform(m, p));
+
+	 M.rotateZ(m, Math.cos(2*beat)/2);
+	 M.translate(m, [0,-.25,0]);
+         c.push(M.transform(m, p));
+
+	 M.rotateZ(m, Math.cos(2*beat)/2);
+	 M.translate(m, [0,-.25,0]);
+         c.push(M.transform(m, p));
+
+	 drawCurve(c);
+      M.restore(m);
+
+      // DRAW THE RIGHT ARM
+
+      M.save(m);
+         c = [];
+         c.push(M.transform(m, p));
+
+	 M.translate(m, [-.1,0,0]);
+         c.push(M.transform(m, p));
+
+	 M.rotateZ(m, -Math.cos(2*beat)/2);
+	 M.translate(m, [0,-.25,0]);
+         c.push(M.transform(m, p));
+
+	 M.rotateZ(m, -Math.cos(2*beat)/2);
+	 M.translate(m, [0,-.25,0]);
+         c.push(M.transform(m, p));
+
+	 drawCurve(c);
+      M.restore(m);
+
+      // DRAW THE TORSO
+
+      var sway = .3 * Math.sin(beat);
+
+      c = [];
+      c.push(M.transform(m, p));
+      M.rotateZ(m, -sway);
+      M.translate(m, [0,-.4,0]);
+      c.push(M.transform(m, p));
+      drawCurve(c);
+
+      // DRAW THE LEFT LEG
+
+      M.rotateZ(m, sway);
+      var legSpread = .5 + .5 * Math.sin(2 * beat);
+
+      M.save(m);
+         c = [];
+         c.push(M.transform(m, p));
+         M.rotateZ(m, .1 + legSpread);
+         M.translate(m, [0,-.3,0]);
+         c.push(M.transform(m, p));
+         M.rotateZ(m, -legSpread * 1.2);
+         M.translate(m, [0,-.3,0]);
+         c.push(M.transform(m, p));
+         M.translate(m, [.1,0,0]);
+         c.push(M.transform(m, p));
+         drawCurve(c);
+      M.restore(m);
+
+      // DRAW THE RIGHT LEG
+
+      M.save(m);
+         c = [];
+         c.push(M.transform(m, p));
+         M.rotateZ(m, -.1 - legSpread);
+         M.translate(m, [0,-.3,0]);
+         c.push(M.transform(m, p));
+         M.rotateZ(m, legSpread * 1.2);
+         M.translate(m, [0,-.3,0]);
+         c.push(M.transform(m, p));
+         M.translate(m, [-.1,0,0]);
+         c.push(M.transform(m, p));
+         drawCurve(c);
+      M.restore(m);
+
+   }
+
+   // WE ARE DRAWING ONLY ONE CANVAS.
+
+   drawCanvases([canvas1]);
+</script>
+

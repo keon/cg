@@ -1,0 +1,58 @@
+<table>
+
+<tr>
+<td><canvas id=canvas2 width=400 height=300></td>
+<td width=50></td>
+<td>
+Hi, I randomly flap.
+</td>
+</tr>
+
+</table>
+
+<script src=drawlib1.js></script>
+<script>
+
+   canvas2.update = function(g) {
+      g.lineWidth = 5;
+
+      g.beginPath();
+      g.moveTo(0, 0);
+      g.lineTo(this.width, 0);
+      g.lineTo(this.width, this.height);
+      g.lineTo(0, this.height);
+      g.lineTo(0, 0);
+      g.stroke();
+
+      var c = '#' + (Math.random() * 0x949494 + 0xaaaaaa | 0).toString(16);
+      var x = this.cursor.x;
+      var y = this.cursor.y;
+      var z = this.cursor.z;
+      if (z == 0) {
+         x = this.width  / 2 + 30 * Math.cos(time) ;
+         y = this.height / 2 + 30 * Math.cos(time);
+      }
+
+      var freq = z == 0 ? 3 : 12;
+      var f = .05;
+      if (Math.random() > .1){
+        f = 0.055
+      }
+      var angle = 10 * f * (Math.sin(freq * time) - 0.5);
+      var angle2 = 10  *   f * (Math.cos(Math.random()*freq * time) - 1);
+
+      var flapY = 50 * Math.sin(angle);
+      var flapX = 50 * Math.cos(angle);
+      var flapY2 = 40 * Math.sin(Math.random() * angle2);
+      var flapX2 =  40 * Math.cos(Math.random()* angle2);
+
+      g.moveTo(x-flapX-flapX2, y-flapY-flapY2);
+      g.lineTo(x-flapX, y-flapY);
+      g.lineTo(x, y);
+      g.lineTo(x+flapX, y-flapY);
+      g.lineTo(x+flapX+flapX2, y-flapY-flapY2);
+      g.stroke();
+   }
+
+   draw2DCanvases([ canvas2 ]);
+</script>

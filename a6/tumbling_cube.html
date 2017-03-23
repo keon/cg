@@ -1,0 +1,108 @@
+
+<table>
+
+<tr>
+<td><canvas id=canvas1 width=600 height=400></td>
+<td width=50></td>
+<td valign=top>
+Some edges of a tumbling cube, drawn as a single curve.
+</td>
+</tr>
+
+</table>
+
+<script src=drawlib1.js></script>
+<script src=M.js></script>
+<script>
+
+   // MATRIX IS AN ARRAY OF 16 NUMBERS.
+
+   var m = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
+
+   canvas1.update = function(g) {
+
+      // DRAW A CURVE IN 3D WITH PERSPECTIVE PROJECTION.
+
+      function drawCurve(c) {
+         var i, cv, x, y, z, fl = 5,
+	     w = canvas1.width;
+	     h = canvas1.height;
+
+	 cv = [];
+	 for (i = 0 ; i < c.length ; i++) {
+
+	    // RETRIEVE COORDINATES FROM CURVE POINT
+
+	    x = c[i][0];
+	    y = c[i][1];
+	    z = c[i][2];
+
+	    // DO PERSPECTIVE TRANSFORM
+
+	    x *= fl / (fl - z);
+	    y *= fl / (fl - z);
+
+	    // DO VIEWPORT TRANSFORM
+
+	    x =  w * x * .5 + .5 * w;
+	    y = -w * y * .5 + .5 * h;
+	    cv.push([x, y, 0]);
+         }
+
+	 // DRAW THE PROJECTED CURVE ONTO THE CANVAS.
+
+	 g.beginPath();
+         g.moveTo(cv[0][0], cv[0][1]);
+	 for (i = 1 ; i < c.length ; i++)
+            g.lineTo(cv[i][0], cv[i][1]);
+	 g.stroke();
+      }
+
+      var c, i;
+
+      // DRAW AN OUTLINE AROUND THE CANVAS.
+
+      g.beginPath();
+      g.moveTo(0,0);
+      g.lineTo(this.width,0);
+      g.lineTo(this.width,this.height);
+      g.lineTo(0,this.height);
+      g.lineTo(0,0);
+      g.stroke();
+
+      // A CURVE WHOSE POINTS ALL LIE ON A CUBE.
+
+      c = [
+         [-1,-1, 1],
+         [ 1,-1, 1],
+	 [ 1, 1, 1],
+	 [-1, 1, 1],
+	 [-1,-1, 1],
+
+         [-1,-1,-1],
+         [ 1,-1,-1],
+	 [ 1, 1,-1],
+	 [-1, 1,-1],
+	 [-1,-1,-1],
+      ];
+
+      // TRANSFORM THE CUBE FOR THIS ANIMATION FRAME.
+      M.identity(m);
+      M.rotateY (m, time);
+      M.rotateX (m, time * 2);
+      M.scale   (m, .3);
+
+      // TRANSFORM THE POINTS OF THE CURVE.
+
+      for (i = 0 ; i < c.length ; i++)
+         c[i] = M.transform(m, c[i]);
+
+      // DRAW THE CURVE.
+
+      drawCurve(c);
+   }
+
+   // WE ARE DRAWING ONLY ONE CANVAS.
+
+   drawCanvases([canvas1]);
+</script>
