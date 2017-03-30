@@ -1,0 +1,121 @@
+
+<table>
+
+<tr>
+<td><canvas id=canvas1 width=600 height=400></td>
+<td width=50></td>
+<td valign=top>
+Parametric meshes of shapes.
+</td>
+</tr>
+
+</table>
+
+<script src=drawlib1.js></script>
+<script src=M.js></script>
+<script src=S.js></script>
+<script>
+
+   // MATRIX IS AN ARRAY OF 16 NUMBERS.
+
+   var m = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
+
+   canvas1.update = function(g) {
+      var p, C, c, canvas = this;
+
+      // DRAW A SET OF CURVES IN 3D WITH PERSPECTIVE PROJECTION.
+
+      function drawCurves(m, C) {
+         var i, n, p, cv, x, y, z, fl = 5,
+	     w = canvas.width;
+	     h = canvas.height;
+
+         // LOOP THROUGH CURVES.
+
+         for (n = 0 ; n < C.length ; n++) {
+
+            // BUILD THE PROJECTED CURVE, POINT BY POINT.
+
+	    cv = [];
+	    for (i = 0 ; i < C[n].length ; i++) {
+
+	       // TRANSFORM POINT
+
+	       p = M.transform(m, C[n][i]);
+
+	       // RETRIEVE COORDINATES FROM TRANSFORMED POINT
+
+	       x = p[0];
+	       y = p[1];
+	       z = p[2];
+
+	       // DO PERSPECTIVE TRANSFORM
+
+	       x *= fl / (fl - z);
+	       y *= fl / (fl - z);
+
+	       // DO VIEWPORT TRANSFORM
+
+	       x =  w * x * .5 + .5 * w;
+	       y = -w * y * .5 + .5 * h;
+	       cv.push([x, y]);
+            }
+
+	    // DRAW THE PROJECTED CURVE ONTO THE CANVAS.
+
+	    g.beginPath();
+            g.moveTo(cv[0][0], cv[0][1]);
+	    for (i = 1 ; i < cv.length ; i++)
+               g.lineTo(cv[i][0], cv[i][1]);
+	    g.stroke();
+         }
+      }
+
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      g.lineWidth = 1;
+
+      // OUTLINE THE CANVAS
+
+      g.beginPath();
+      g.moveTo(0,0);
+      g.lineTo(this.width,0);
+      g.lineTo(this.width,this.height);
+      g.lineTo(0,this.height);
+      g.lineTo(0,0);
+      g.stroke();
+
+      M.identity(m);
+      M.scale(m, .5);  // Scale the scene down.
+
+      // DRAW SHAPES.
+
+      M.save(m);
+         M.rotateY(m, time);
+         M.rotateX(m, time/2);
+
+	 // DRAW AN OPEN PARAMETRIC-MESH TUBE.
+
+         drawCurves(m, S.parametricMesh(S.tube, 16, Math.sin(time) * 4));
+         drawCurves(m, S.parametricMesh(S.sphere, 16, Math.tan(time)* 4));
+         drawCurves(m, S.parametricMesh(S.tube, Math.cos(time) * 16, 4));
+
+         // DRAW OCTAHEDRON WITH THICK LINES
+
+         g.lineWidth = 5;
+         drawCurves(m, [
+            [[-1,0,0],[0,-1,0],[0,0,-1],[-1,0,0]],
+            [[ 1,0,0],[0,-1,0],[0,0,-1],[ 1,0,0]],
+            [[-1,0,0],[0, 1,0],[0,0,-1],[-1,0,0]],
+            [[ 1,0,0],[0, 1,0],[0,0,-1],[ 1,0,0]],
+            [[-1,0,0],[0,-1,0],[0,0, 1],[-1,0,0]],
+            [[ 1,0,0],[0,-1,0],[0,0, 1],[ 1,0,0]],
+            [[-1,0,0],[0, 1,0],[0,0, 1],[-1,0,0]],
+            [[ 1,0,0],[0, 1,0],[0,0, 1],[ 1,0,0]], ]);
+      M.restore(m);
+   }
+
+   // WE ARE DRAWING ONLY ONE CANVAS.
+
+   drawCanvases([canvas1]);
+</script>
