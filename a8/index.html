@@ -1,0 +1,94 @@
+
+<table>
+
+<tr>
+<td><canvas id=canvas1 width=600 height=400></td>
+<td width=50></td>
+<td valign=top>
+<big><b>
+Example of Hermite curve.
+</b></big>
+</td>
+</tr>
+
+</table>
+
+<script src=drawlib2.js></script>
+<script src=M.js></script>
+<script src=S.js></script>
+<script>
+
+   var m = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
+
+   var Hermite = [ 2,-3,0,1,  -2,3,0,0,  1,-2,1,0,  1,-1,0,0 ];
+
+   function cubic(A, t) { return A[0] * t*t*t + A[1] * t*t + A[2] * t + A[3]; }
+
+   canvas1.update = function(g) {
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      g.lineWidth = 1;
+
+      // OUTLINE THE CANVAS
+
+      g.beginPath();
+      g.moveTo(0,0);
+      g.lineTo(this.width,0);
+      g.lineTo(this.width,this.height);
+      g.lineTo(0,this.height);
+      g.lineTo(0,0);
+      g.stroke();
+
+      var P = [
+                [ -.5, -.5,  0],
+                [  .5,  .5, .5],
+		[  .5, -.5,  0],
+	      ];
+      var R = [
+                [   1,   0,  0],
+                [   0,   1,  Math.sin(time)],
+		[   1,   0,  0],
+              ];
+
+      for(let i = 0; i < 100; i++){
+        P.push([time, 1, time]);
+        P.push([-2, time, -1]);
+        P.push([-1, -1, time]);
+        P.push([time, 1, 2]);
+        P.push([1, time, 2]);
+        P.push([1, -1, time]);
+
+        R.push([3, -time, 1]);
+        R.push([time, 1, -1]);
+        R.push([2, -1, time]);
+        R.push([1, time, 1]);
+        R.push([time, 1, 2]);
+        R.push([1, 1, time]);
+      }
+
+
+      M.identity(m);
+      M.save(m);
+
+         M.rotateY(m, Math.PI/4);
+
+         var curves = [];
+
+         for (var n = 0 ; n < P.length-1 ; n++) {
+            var X = M.transform(Hermite, [ P[n][0], P[n+1][0], R[n][0], R[n+1][0] ]);
+            var Y = M.transform(Hermite, [ P[n][1], P[n+1][1], R[n][1], R[n+1][1] ]);
+            var Z = M.transform(Hermite, [ P[n][2], P[n+1][2], R[n][2], R[n+1][2] ]);
+
+            var curve = [];
+            for (var t = 0 ; t < 1.0001 ; t += 1/20)
+               curve.push( [ cubic(X, t), cubic(Y, t), cubic(Z, t) ] );
+            curves.push(curve);
+         }
+
+         this.drawCurves(m, curves );
+
+      M.restore(m);
+   }
+
+   drawCanvases([canvas1]);
+</script>
