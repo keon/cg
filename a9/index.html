@@ -1,0 +1,232 @@
+
+<table>
+    <tr>
+        <td>
+            <canvas id=canvas1 width=600 height=400></canvas>
+            <br>
+            <button type="submit" id="curve">Toggle Open/Closed Curve</button>
+            <button type="submit" id="keypoints">Toggle Key Point Visibility</button>
+        </td>
+        <td width=50></td>
+        <td valign=top>
+	<big><b>
+	Example of Bspline curve
+	</b></big>
+	<p>
+	Some ways this could be extended:
+            <ul>
+                <li>Click midpoint between two key points to insert a new key point.
+                <li>Click on a key point to delete it.
+                <li>Toggle between open and closed curve.
+                <li>Toggle curve appearance: stroke or fill or both in different colors.
+                <li>Toggle key points between visible and invisible.
+                <li>Support multiple curves.
+                <li>Use multiple bsplines to create your own font.
+                <li>Build a font designer.
+                <li>Use multiple bsplines to make an animated face.
+            </ul>
+        </td>
+    </tr>
+
+</table>
+
+<script src=drawlib2.js></script>
+<script src=M.js></script>
+<script src=S.js></script>
+<script>
+    const m = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    const Bspline = [
+        -1 / 6,  3 / 6, -3 / 6, 1 / 6,  // a,b,c,d cubic coefficients from P0
+         3 / 6, -6 / 6,      0, 4 / 6,  // a,b,c,d cubic coefficients from P1
+        -3 / 6,  3 / 6,  3 / 6, 1 / 6,  // a,b,c,d cubic coefficients from P2
+         1 / 6,      0,      0,     0   // a,b,c,d cubic coefficients from P3
+    ];
+
+    function cubic(A, t) {
+        return A[0] * t * t * t + A[1] * t * t + A[2] * t + A[3];
+    }
+
+    const P_ = [
+        [-.2, -.6, 0],
+        [-.2, .1, 0],
+        [.4, -.3, 0],
+        [.6, -.1, 0],
+        [.1, -.8, 1],
+    ];
+
+    const P = [
+        [-.9, -.5, 0],
+        [-.1, .5*Math.sin(time), 0],
+        [.2, .4, 0],
+        [.5, -.2*Math.cos(time), 0],
+        [.8, -.5*Math.sin(time), 0],
+    ];
+
+    function getRandomColor() {
+        var letters = '0123456789ABCDEF';
+        var color = '#';
+        for (var i = 0; i < 6; i++ ) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+
+    let isOpen = false;
+    let keyPoints = true;
+
+    const curveToggle = document.querySelector('#curve');
+        curveToggle.addEventListener('click', function() {
+        isOpen = (isOpen !== true);
+    });
+    const keyPointsToggle = document.querySelector('#keypoints');
+    keyPointsToggle.addEventListener('click', function() {
+        keyPoints = (keyPoints !== true);
+    });
+
+    function nearPoint(x, y, prox = 0.05, points = P) {
+        for (let n = 0; n < points.length; n++) {
+            let dx = points[n][0] - x,
+                dy = points[n][1] - y;
+            if (dx * dx + dy * dy < prox * prox)
+                return n;
+        }
+        return -1;
+    }
+
+    canvas1.update = function (g) {
+        g.lineCap = 'round';
+        g.lineJoin = 'round';
+        g.lineWidth = 1;
+
+        // OUTLINE THE CANVAS
+        g.strokeStyle = 'black';
+        g.beginPath();
+        g.moveTo(0, 0);
+        g.lineTo(this.width, 0);
+        g.lineTo(this.width, this.height);
+        g.lineTo(0, this.height);
+        g.lineTo(0, 0);
+        g.stroke();
+
+        // DRAW THE SCENE
+        M.identity(m);
+        M.save(m);
+        let curves, curve, n, t;
+
+        const limit = (isOpen === true) ? P.length - 1 : P.length;
+        const cx = (this.cursor.x - this.width / 2) / (this.width / 2);
+        const cy = (this.cursor.y - this.height / 2) / -(this.width / 2);
+
+        if (this.cursor.z) {
+            if (this.n === undefined) {
+                const keyPointIndex = nearPoint(cx, cy);
+                if (keyPointIndex !== -1)
+                    this.n = keyPointIndex;
+            }
+            if (this.point === undefined) {
+                for (n = 0; n < limit; n++) {
+                    let midPointX = (P[n][0] + P[(n + 1) % P.length][0]) / 2;
+                    let midPointY = (P[n][1] + P[(n + 1) % P.length][1]) / 2;
+                    let dx = midPointX - cx;
+                    let dy = midPointY - cy;
+
+                    if (dx * dx + dy * dy < 0.15 * 0.15) {
+                        if (!(nearPoint(cx, cy) !== -1 || this.n !== undefined)) {
+                            this.point = [cx, cy, 0];
+                            this.pointIndex = n + 1;
+                        }
+                        break;
+                    }
+                }
+            }
+        } else {
+            if (this.n !== undefined) {
+                const pointIndexToDelete = nearPoint(cx, cy, 0.02, P_);
+                if(pointIndexToDelete !== -1) {
+                    P_.splice(this.n, 1);
+                    P.splice(this.n, 1);
+                } else if(P_.length !== P.length) {
+                    for(let i = 0; i < P.length; i++) {
+                        if(!(P_.includes(P[i]))) {
+                            P_.splice(i, 0, P[i]);
+                            break;
+                        }
+                    }
+                } else {
+                    P_[this.n][0] = cx;
+                    P_[this.n][1] = cy;
+                }
+            }
+            delete this.n;
+            delete this.point;
+            delete this.pointIndex;
+        }
+
+        if (this.n !== undefined) {
+            P[this.n][0] = cx;
+            P[this.n][1] = cy;
+        }
+
+        if (this.point !== undefined) {
+            P.splice(this.pointIndex, 0, this.point);
+            delete this.point;
+            delete this.pointIndex;
+        }
+
+        curve = [];
+        if(isOpen) {
+            for (n = 1; n < P.length - 2; n++) {
+                const X = M.transform(Bspline, [P[n - 1][0], P[n][0], P[n + 1][0], P[n + 2][0]]);
+                const Y = M.transform(Bspline, [P[n - 1][1], P[n][1], P[n + 1][1], P[n + 2][1]]);
+                const Z = M.transform(Bspline, [P[n - 1][2], P[n][2], P[n + 1][2], P[n + 2][2]]);
+
+                for (t = 0; t < 1.0001; t += 1 / 20)
+                    curve.push([cubic(X, t), cubic(Y, t), cubic(Z, t)]);
+            }
+        } else {
+            for (n = 0; n < P.length; n++) {
+                let nm = (n - 1 + P.length) % P.length,
+                    n1 = (n + 1           ) % P.length,
+                    n2 = (n + 2           ) % P.length,
+                    X = M.transform(Bspline, [P[nm][0], P[n][0], P[n1][0], P[n2][0]]),
+                    Y = M.transform(Bspline, [P[nm][1], P[n][1], P[n1][1], P[n2][1]]),
+                    Z = M.transform(Bspline, [P[nm][2], P[n][2], P[n1][2], P[n2][2]]);
+
+                for (t = 0; t < 1.0001; t += 1 / 20)
+                    curve.push([cubic(X, t), cubic(Y, t), cubic(Z, t)]);
+            }
+        }
+
+        g.fillStyle = getRandomColor();
+        this.drawCurves(m, [curve], !isOpen);
+        if(keyPoints) {
+            curves = [];
+            for (n = 0; n < P.length; n++) {
+                curve = [];
+                for (t = 0; t < 2 * Math.PI; t += 1 / 10)
+                    curve.push([P[n][0] + .015 * Math.cos(t), P[n][1] + .015 * Math.sin(t), 0]);
+                curves.push(curve);
+            }
+            g.fillStyle = 'blue';
+            this.drawCurves(m, curves, true);
+
+            curves = [];
+            for (n = 0; n < limit; n++)
+                curves.push([P[n], P[(n + 1) % P.length]]);
+
+            g.strokeStyle = 'blue';
+            this.drawCurves(m, curves);
+        }
+
+        curves = [];
+        curves.push([[cx - .1, cy], [cx + .1, cy]]);
+        curves.push([[cx, cy - .1], [cx, cy + .1]]);
+        g.strokeStyle = 'red';
+        this.drawCurves(m, curves);
+
+        M.restore(m);
+    };
+
+    drawCanvases([canvas1]);
+</script>
