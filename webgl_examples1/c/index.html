@@ -1,0 +1,66 @@
+<script src=lib2d.js></script>
+
+<body bgcolor=black text=white>
+<center>
+<canvas id='canvas1' width=600 height=600></canvas>
+</center>
+</body>
+
+<script id='vs_script' type='x-shader/x-vertex'>
+   attribute vec3 aPos, aNor;
+   varying   vec3 vPos, vNor;
+   void main() {
+      gl_Position = vec4(aPos, 1.0);  // Set position of vertex in image.
+      vPos = aPos;                    // Copy pos to a varying variable to
+      vNor = aNor;
+   }
+</script>
+
+<script id='fs_script' type='x-shader/x-fragment'>
+varying vec3 vPos;                               // Position at this pixel
+varying vec3 vNor;                               // Normal at this pixel
+uniform float uTime;                             // Time
+void main() {
+   vec3 normal = normalize(vNor);
+   vec3 c = normal;
+   gl_FragColor = vec4(sqrt(c), 1.);             // Final pixel color
+}
+</script>
+   
+<script>
+
+var vs = vs_script.innerHTML, fs = fs_script.innerHTML;
+
+addTextEditor(fs, function() { canvas1.setShaders(vs, this.value); });
+
+gl_start(canvas1, vs, fs);
+
+   var scene = new Scene();
+
+   var obj1 = new SceneObject();
+   obj1.setVertices([
+      -.3,-.3, 0,  0,0,1,
+       .3,-.3, 0,  0,0,1,
+       .3, .3, 0,  0,0,1,
+
+       .3, .3, 0,  0,0,1,
+      -.3, .3, 0,  0,0,1,
+      -.3,-.3, 0,  0,0,1,
+   ]);
+   scene.addObject(obj1);
+
+   var obj2 = new SceneObject();
+   obj2.setVertices([
+      -.2,-.2,-.3,  -1,0,0,
+       .4,-.2, .3,  -1,0,0,
+       .4, .4, .3,  -1,0,0,
+
+       .4, .4, .3,  -1,0,0,
+      -.2, .4,-.3,  -1,0,0,
+      -.2,-.2,-.3,  -1,0,0,
+   ]);
+   scene.addObject(obj2);
+
+   canvas1.scene = scene;
+
+</script>

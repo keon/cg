@@ -1,0 +1,80 @@
+<script src=M.js></script>
+<script src=lib2g.js></script>
+
+<body bgcolor=black text=white>
+<center>
+<canvas id='canvas1' width=600 height=600></canvas>
+</center>
+</body>
+
+<script id='vs_script' type='x-shader/x-vertex'>
+   attribute vec3 aPos, aNor;
+   varying   vec3 vPos, vNor;
+   uniform   mat4 matrix, invMatrix;
+   void main() {
+      vec4 pos = matrix * vec4(aPos, 1.);
+      vec4 nor = vec4(aNor, 0.) * invMatrix;
+
+      dot(nor, pos);
+      dot(nor * invMatrix, matrix * pos);
+// nor . invMatrix . matrix . pos
+// nor . (invMatrix . matrix) . pos
+// nor . pos
+
+      gl_Position = pos;
+      vPos = pos.xyz;
+      vNor = nor.xyz;
+   }
+</script>
+
+<script id='fs_script' type='x-shader/x-fragment'>
+varying vec3 vPos, vNor;
+void main() {
+   vec3 normal = normalize(vNor);
+   vec3 c = normal * .5 + .5;
+   gl_FragColor = vec4(sqrt(c), 1.);
+}
+</script>
+
+<script>
+
+
+
+var m = M.identityMatrix();
+
+var vs = vs_script.innerHTML, fs = fs_script.innerHTML;
+
+addTextEditor(fs, function() { canvas1.setShaders(vs, this.value); });
+var tempobj;
+
+gl_start(canvas1, vs, fs,
+   function(time) {
+      M.identity(m);
+      M.rotateY(m, time);
+      M.rotateX(m, time);
+      M.rotateZ(m, time);
+
+      M.save(m);
+         tempobj.setMatrix(m);
+      M.restore(m);
+
+   }
+
+);
+ var scene = new Scene();
+
+ for (var i = 0; i < 10; i++){
+     tempobj = new SceneObject();
+     tempobj.setVertices([
+    -.3,-.5, .3,  i* .3,0,1,
+     .3,-.5, .3,  time* .3,.2,1,
+     .3, .2, 0,  2.0,0,1,
+     .3, .3, 0,  2.0,0,1,
+    -.3, .3, 0,  -.1,.1,3,
+    -.3,-.3, 0,  -.1,.1,3,
+  ]);
+    scene.addObject(tempobj);
+ }
+ canvas1.scene = scene;
+
+</script>
